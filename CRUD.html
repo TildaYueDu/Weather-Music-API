@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Single-page CRUD</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+	<script src="https://connect.soundcloud.com/sdk/sdk-3.0.0.js"></script>
+
+	<link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+	<header>
+		<h2>WeatherMood Music</h2>
+	</header>
+	<div id='input'>
+		<form id='query'>
+			<input type='text' id="location" name='location' placeholder="Input your location"/>
+			<input type='button' id='q' value='Submit' />
+		</form>
+		<div id='output'></div>
+	</div>
+    <div>
+		<audio controls id="play"></audio>
+    </div>
+	<ul id="results"></ul>
+
+
+	<script>
+		var weatherMain;
+		var genres = {snow:"piano",rain:"violoncello",cloud:"light music",clear:"country",random:'pop'};
+
+		// OpenWeatherMap API
+		// add an event listener to the query button
+		$('#q').on( 'click', pressed );
+
+		// when the button is pressed...
+		function pressed(ev) {
+			// get the city
+			var city = $('*[name=location]').val();
+			// build the url
+			var url = "http://api.openweathermap.org/data/2.5/weather?q="+city+"&appid=5f32dfdeae9fd82d567b017015fc2340";
+			// send an ajax call to get the weather
+			$.ajax({
+				url: url,
+				dataType: 'json'
+			}).done(function(data){
+				// get the temperature
+				console.log(data);
+				var tempK = parseFloat(data.main.temp);
+				var weatherDes = data.weather[0].description;
+				var weatherIcon = "http://openweathermap.org/img/w/"+ data.weather[0].icon +".png";
+				weatherMain = data.weather[0].main;
+				console.log(weatherMain);
+
+				// convert to celcius
+				var tempC = tempK - 273.15;
+				tempC = Math.round(tempC * 100) / 100;
+
+				// output:
+				var div = $( document.createElement('div') );
+				var html = "<span class='city'>";
+				html += city;
+				html += "</span><span class='temp'>";
+				html += tempC;
+				html += "&deg;C</span><img src='"+weatherIcon+"'/><br/><span class='weatherDes'>";
+				html += "<span>In the </span>"+weatherDes+"<span> Let's enjoy a </span><span id='genre'></span><span> song</span>";
+				html += "</span>";
+				div.html( html );
+				$('#output').html("");
+				$('#output').append( div ); // OR div.innerHTML = html;
+				
+				getWeather();
+
+			}).fail(function(){
+				console.log("Sorry!");
+			});
+			// dispay the weather in the #output block
+		}
+
+
+		function getWeather(){
+			// connect weather with music
+
+			if (weatherMain === "Snow"){
+				
+				console.log(genres.snow);
+				musicSearch(genres.snow);
+			}
+			if (weatherMain === "Rain"){	
+				
+				console.log(genres.rain);	
+				musicSearch(genres.rain);
+			}
+			if (weatherMain === "Clouds"){
+				console.log(genres.cloud);
+				musicSearch(genres.cloud);
+			}
+			if (weatherMain === "Clear"){
+				console.log(genres.clear);
+				musicSearch(genres.clear);
+			}			
+			// if (weatherMain != ){
+			// 	console.log(genres.random);
+			// }
+		};
+		
+
+		// soundcloud API
+		var audio = document.querySelector('audio');
+		SC.initialize({
+		  client_id: 'b66bbf2006d79229f07014ebae957bdc'
+		});
+		// document.querySelector("#music").addEventListener('input',musicSearch)
+		function musicSearch(g){
+			// g.preventDefault();
+			var list = document.querySelector('#results');
+			list.innerHTML = '';
+			// var genres = document.querySelector('#genres').value;
+			var gen = document.querySelector("#genre");
+			gen.textContent = g;
+			SC.get('/tracks',{genres:g}).then(function (tracks){
+					tracks.forEach(function (track){
+						var item = document.createElement('li');
+						item.addEventListener('click', player.bind(null, track.id));
+						var p = document.createElement("p");
+						p.textContent = track.title;
+						
+						var img = new Image();
+						img.src = track.artwork_url;
+						item.appendChild( img );
+						item.appendChild( p );
+						list.appendChild(item);
+					});
+					console.log("TRACKS:",tracks);
+					audio.addEventListener('ended', function () {
+						audio.src = tracks[Math.floor(Math.random() * tracks.length)].stream_url + '?client_id=b66bbf2006d79229f07014ebae957bdc'
+					});
+			});
+		}
+	    function player (id) {
+		    
+		    audio.src = "https://api.soundcloud.com/tracks/" + id + "/stream?client_id=b66bbf2006d79229f07014ebae957bdc";
+		   
+		    audio.autoplay = true;
+			audio.load();
+	    }
+
+
+
+
+		
+	</script>
+</body>
+</html>
